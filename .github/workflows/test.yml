@@ -1,0 +1,39 @@
+# documentation: https://help.github.com/en/articles/workflow-syntax-for-github-actions
+name: Tests for eessi-cli
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read # to fetch code (actions/checkout)
+jobs:
+  ubuntu-minimal:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        python: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
+    steps:
+    - uses: actions/checkout@v4.1.4
+    - name: set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{matrix.python}}
+
+    - name: Install eessi-cli
+      id: install
+      run: |
+        export PREFIX=/tmp/$USER/$GITHUB_SHA
+        pip install --prefix $PREFIX .
+        echo "export PATH=$PREFIX/bin:$PATH" >> ~/env
+        echo "export PYTHONPATH=$(ls -d $PREFIX/lib/python*/site-packages)" >> ~/env
+
+    - name: Test init (without EESSI mounted)
+      run: |
+        source ~/env
+        eessi init 2>&1 | grep "^ERROR: /cvmfs/software.eessi.io/versions/2023.06 does not exist"
+
+    - name: Mount EESSI
+      uses: eessi/github-action-eessi@v3.1.0
+
+    - name: Test init
+      run: |
+        source ~/env
+        eessi init
+        eval "$(eessi init)"
