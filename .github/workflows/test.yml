@@ -10,9 +10,9 @@ jobs:
       matrix:
         python: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
-    - uses: actions/checkout@v4.1.4
+    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
     - name: set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.0
       with:
         python-version: ${{matrix.python}}
 
@@ -30,7 +30,7 @@ jobs:
         eessi init 2>&1 | grep "^ERROR: /cvmfs/software.eessi.io/versions/2023.06 does not exist"
 
     - name: Mount EESSI
-      uses: eessi/github-action-eessi@v3.1.0
+      uses: eessi/github-action-eessi@e1f8f20638ea417a18d23ab29443ee34794ff900 # v3.1.0
 
     - name: Test init
       run: |
