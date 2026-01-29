@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="eessi-cli",
+    name="eessi",
     version="0.0.1",
     description="EESSI command line interface",
     url="https://github.com/EESSI/eessi-cli",

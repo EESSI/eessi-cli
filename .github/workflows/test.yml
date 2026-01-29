@@ -1,5 +1,5 @@
 # documentation: https://help.github.com/en/articles/workflow-syntax-for-github-actions
-name: Tests for eessi-cli
+name: Tests for 'eessi' command line tool
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read # to fetch code (actions/checkout)
@@ -16,7 +16,7 @@ jobs:
       with:
         python-version: ${{matrix.python}}
 
-    - name: Install eessi-cli
+    - name: Install eessi command line tool
       id: install
       run: |
         export PREFIX=/tmp/$USER/$GITHUB_SHA
