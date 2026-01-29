@@ -7,7 +7,7 @@ name = "eessi"
 description = "Command line tool (CLI) to manage and launch your EESSI environment"
 readme = "README.md"
 authors = [
-    {name = "Kenneth Hoste", email = "kenneth.hoste@ugent.be"},
+    {name = "Kenneth Hoste"},
 ]
 license = {file = "LICENSE"}
 dynamic = ["version"]
