@@ -5,14 +5,26 @@
 import subprocess
 import sys
 import tempfile
+
 import typer
 from rich import print as rich_print
+
+from eessi.cli.help import help_callback
 
 app = typer.Typer()
 
 
 @app.command()
-def shell():
+def shell(
+    help: bool = typer.Option(
+        None,  # default value
+        "-h",
+        "--help",
+        help="Show this message and exit.",
+        callback=help_callback,
+        is_eager=True,
+    ),
+):
     """
     Create subshell in which EESSI is available and initialised
     """
