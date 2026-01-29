@@ -31,7 +31,7 @@ def main(
         None,  # default value
         "-v",  # short option
         "--version",  # long option
-        help="show version of eessi CLI",
+        help="Show version of eessi CLI",
         callback=version_callback,
     ),
 ):
