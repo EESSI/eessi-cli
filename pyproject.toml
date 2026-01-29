@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eessi"
+description = "User-friendly command line interface to EESSI - https://eessi.io"
+readme = "README.md"
+authors = [
+    {name = "Kenneth Hoste"},
+]
+license = {file = "LICENSE"}
+dynamic = ["version"]
+requires-python = ">=3.9"
+dependencies = [
+    "typer>=0.21",
+    "rich>=14.0",
+]
+
+[project.scripts]
+eessi = "eessi.cli.main:app"
+
+[tool.setuptools.dynamic]
+version = {attr = "eessi.__version__"}
