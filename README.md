@@ -51,8 +51,10 @@ To see which commands this would evaluate, just run `eessi init`.
 Create subshell in which EESSI is available and initialised
 
 ```shell
-eessi shell
+eessi shell --eessi-version 2025.06
 ```
+
+You *must* specify the EESSI version to use, there is no default value for this.
 
 ## Design goals
 
