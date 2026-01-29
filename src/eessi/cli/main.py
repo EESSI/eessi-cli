@@ -12,6 +12,7 @@ from eessi.cli.shell import app as shell_app
 app = typer.Typer(
     help="User-friendly command line interface to EESSI - https://eessi.io",
     context_settings={"help_option_names": ["-h", "--help"]},
+    no_args_is_help=True,
 )
 
 app.add_typer(check_app)
