@@ -36,6 +36,6 @@ def shell(
     with open(init_file, 'w') as fp:
         fp.write(f"set -e; source /cvmfs/software.eessi.io/versions/{eessi_version}/init/bash")
 
-    res = subprocess.run(['/bin/bash', '--init-file', init_file])
+    res = subprocess.run(['/bin/bash', '--init-file', init_file, '-i'])
     if res.returncode != 0:
         report_error("ERROR: Non-zero exit code detected for interactive shell!", exit_code=res.returncode)
