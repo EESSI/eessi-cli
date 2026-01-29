@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mysnapshots = "eessi.cli.main:app"
+eessi = "eessi.cli.main:app"
 
 [tool.setuptools.dynamic]
 version = {attr = "eessi.__version__"}
