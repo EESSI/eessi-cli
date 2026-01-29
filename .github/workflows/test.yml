@@ -24,16 +24,39 @@ jobs:
         echo "export PATH=$PREFIX/bin:$PATH" >> ~/env
         echo "export PYTHONPATH=$(ls -d $PREFIX/lib/python*/site-packages)" >> ~/env
 
-    - name: Test init (without EESSI mounted)
+    - name: Test 'eessi init' (without EESSI mounted)
       run: |
         source ~/env
         eessi init 2>&1 | grep "^ERROR: /cvmfs/software.eessi.io/versions/2023.06 does not exist"
 
-    - name: Mount EESSI
-      uses: eessi/github-action-eessi@e1f8f20638ea417a18d23ab29443ee34794ff900 # v3.1.0
+    - name: Test 'eessi shell' (without EESSI mounted)
+      run: |
+        source ~/env
+        eessi shell --eessi-version 2023.06 2>&1 | tee shell.out
+        grep "No such file or directory" shell.out
+        grep "^ERROR: Non-zero exit code detected for interactive shell" shell.out
 
-    - name: Test init
+    - name: Mount EESSI CernVM-FS repository
+      uses: cvmfs-contrib/github-action-cvmfs@bc6dae3b3c00a732994bacfac8f0902a3e422c53 # v5.4
+      with:
+        cvmfs_repositories: 'software.eessi.io'
+
+    - name: Test 'eessi init'
       run: |
         source ~/env
         eessi init
         eval "$(eessi init)"
+
+    - name: Test 'eessi shell'
+      run: |
+        source ~/env
+
+        echo ">>> checking behaviour of 'eessi shell' without specifying EESSI version to use..."
+        eessi shell 2>&1 | tee shell.out
+        grep "EESSI version to use is not specified" shell.out
+
+        echo ">>> checking environment of subshell created with 'eessi shell' for EESSI 2023.06"
+        eessi shell --eessi-version 2023.06 <<< 'env | grep ^EESSI' 2>&1 | tee shell.out
+        grep '^Found EESSI repo @ /cvmfs/software.eessi.io/versions/2023.06' shell.out
+        grep '^Environment set up to use EESSI (2023.06), have fun' shell.out
+        grep '^EESSI_VERSION=2023.06' shell.out
