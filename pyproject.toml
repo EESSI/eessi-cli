@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eessi"
-description = "Command line tool (CLI) to manage and launch your EESSI environment"
+description = "User-friendly command line interface to EESSI - https://eessi.io"
 readme = "README.md"
 authors = [
     {name = "Kenneth Hoste"},
