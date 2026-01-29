@@ -12,7 +12,7 @@ from typing import Annotated
 app = typer.Typer()
 
 
-def report_error(msg, exit_code:int=1):
+def report_error(msg, exit_code: int = 1):
     """
     Report error and exit with specified non-zero exit code
     """
