@@ -24,7 +24,18 @@ pip install .
 
 ## Usage
 
+Use `eessi --help` to get basic usage information.
+
+### `check` subcommand
+
+Check CernVM-FS setup for accessing EESSI
+
+*(to be implemented)*
+
+
 ### `init` subcommand
+
+Initialize shell environment for using EESSI
 
 Use `eval` and `eessi init` to prepare your session environment for using EESSI.
 
@@ -35,7 +46,13 @@ eval "$(eessi init)"
 To see which commands this would evaluate, just run `eessi init`.
 
 
+### `shell` subcommand
+    
+Create subshell in which EESSI is available and initialised
+
+*(to be implemented)*
+
 ## Design goals
 
 * Easy to install and use.
-* No dependencies beyond Python 3.6 (or newer) and the Python standard library.
+* User-friendly and intuitive interface to using EESSI.

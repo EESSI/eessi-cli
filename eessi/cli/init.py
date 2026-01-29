@@ -1,12 +1,16 @@
 # license (SPDX): GPL-2.0-only
-# 
+#
 # authors: Kenneth Hoste (Ghent University)
 
 import os
 import sys
+import typer
+
+app = typer.Typer()
 
 
-def init(_):
+@app.command()
+def init():
     """
     Initialize shell environment for using EESSI
     """
