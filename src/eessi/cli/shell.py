@@ -16,9 +16,9 @@ def report_error(msg, exit_code:int=1):
     """
     Report error and exit with specified non-zero exit code
     """
-    if exit_code <= 0:
-        raise ValueError("Exit code should be positive non-zero integer")
     rich_print(f"[bold red]{msg}", file=sys.stderr)
+    if exit_code <= 0:
+        raise ValueError(f"Exit code should be positive non-zero integer, got {exit_code}")
     sys.exit(exit_code)
 
 
