@@ -2,7 +2,11 @@
 #
 # authors: Kenneth Hoste (Ghent University)
 
+import subprocess
+import sys
+import tempfile
 import typer
+from rich import print as rich_print
 
 app = typer.Typer()
 
@@ -12,4 +16,11 @@ def shell():
     """
     Create subshell in which EESSI is available and initialised
     """
-    raise NotImplementedError
+    init_file = tempfile.mkstemp()[1]
+    with open(init_file, 'w') as fp:
+        fp.write("set -e; source /cvmfs/software.eessi.io/versions/2023.06/init/bash")
+
+    res = subprocess.run(['/bin/bash', '--init-file', init_file])
+    if res.returncode != 0:
+        rich_print("[bold red]ERROR: Non-zero exit code detected for interactive shell!", file=sys.stderr)
+        sys.exit(res.returncode)
