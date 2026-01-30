@@ -12,14 +12,6 @@ from typer import rich_utils
 import eessi
 
 
-def version_callback(value: bool):
-    """
-    Show version and exit early.
-    """
-    if value:
-        rich_print(f"[bold]eessi[/bold] version {eessi.__version__}")
-        raise typer.Exit()
-
 def help_callback(ctx: click.Context, param: click.Parameter, value: bool):
     """
     Show default help with rich and exit early.
@@ -31,3 +23,12 @@ def help_callback(ctx: click.Context, param: click.Parameter, value: bool):
     # print default help with rich
     rich_utils.rich_format_help(obj=ctx.command, ctx=ctx, markup_mode="rich")
     ctx.exit()
+
+def version_callback(value: bool):
+    """
+    Show version and exit early.
+    """
+    if value:
+        rich_print(f"[bold]eessi[/bold] version {eessi.__version__}")
+        raise typer.Exit()
+
