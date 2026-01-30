@@ -1,6 +1,8 @@
 # license (SPDX): GPL-2.0-only
 #
-# authors: Kenneth Hoste (Ghent University)
+# authors:
+# - Kenneth Hoste (Ghent University)
+# - Alex Domingo (Vrije Universiteit Brussel)
 
 import click
 import typer
