@@ -5,9 +5,12 @@
 import subprocess
 import sys
 import tempfile
+from typing import Annotated
+
 import typer
 from rich import print as rich_print
-from typing import Annotated
+
+from eessi.cli.help import help_callback
 
 app = typer.Typer()
 
@@ -24,7 +27,17 @@ def report_error(msg, exit_code: int = 1):
 
 @app.command()
 def shell(
-    eessi_version: Annotated[str, typer.Option(help="EESSI version")] = '',
+    help: bool = typer.Option(
+        None,  # default value
+        "-h",
+        "--help",
+        help="Show this message and exit.",
+        callback=help_callback,
+        is_eager=True,
+    ),
+    eessi_version: Annotated[str, typer.Option(
+        help="EESSI version"
+    )] = '',
 ):
     """
     Create subshell in which EESSI is available and initialised
