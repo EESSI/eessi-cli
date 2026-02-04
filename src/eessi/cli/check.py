@@ -155,6 +155,25 @@ def reformat_for_humans(key: str, value: str):
     return value
 
 
+def check_cache_cleanups(repo: str, indent_level: int):
+    """
+    Check number of cache cleanups in last 24h
+    """
+    ncleanup24 = get_repo_attribute(repo, 'ncleanup24')
+    msg = f"Number of cache cleanups in last 24h: {ncleanup24}"
+    if ncleanup24 == UNKNOWN:
+        status = ERROR
+    else:
+        ncleanup24 = int(ncleanup24)
+
+        if ncleanup24 > 24:
+            status = WARNING
+            msg += " (cache quota limit too low?)"
+        else:
+            status = OK
+    print_result(status, msg, indent_level=indent_level)
+
+
 def check_repo(repo: str):
     """
     Checks for specified CernVM-FS repository
@@ -172,6 +191,7 @@ def check_repo(repo: str):
             'sigil': 'computer',
             'keys': ['CVMFS_CACHE_DIR', 'CVMFS_SHARED_CACHE', 'CVMFS_QUOTA_LIMIT'],
             'stat_fields': ["Cache Usage"],
+            'other': [check_cache_cleanups],
         },
         "Server/proxy settings": {
             'sigil': 'globe_showing_europe-africa',
@@ -221,19 +241,11 @@ def check_repo(repo: str):
             else:
                 print_result(ERROR, f"Required field '{field}' not found!", indent_level=2)
 
-    ncleanup24 = get_repo_attribute(repo, 'ncleanup24')
-    msg = f"Number of cache cleanups in last 24h: {ncleanup24}"
-    if ncleanup24 == UNKNOWN:
-        status = ERROR
-    else:
-        ncleanup24 = int(ncleanup24)
-        
-        if ncleanup24 > 24:
-            status = WARNING
-            msg += " (cache quota limit too low?)"
-        else:
-            status = OK
-    print_result(status, msg, indent_level=1)
+        for other_check in specs.get('other', []):
+            if callable(other_check):
+                other_check(repo, indent_level=2)
+            else:
+                raise ValueError(f"{other_check} is not callable?!")
 
 
 # TODO:
