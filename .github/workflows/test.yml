@@ -36,6 +36,18 @@ jobs:
         grep "No such file or directory" shell.out
         grep "^ERROR: Non-zero exit code detected for interactive shell" shell.out
 
+    - name: Test 'eessi check' (without EESSI mounted)
+      run: |
+        source ~/env
+        eessi check | tee check.out
+        grep 'Checking for EESSI repositories...' check.out
+        grep 'ERROR /cvmfs/software.eessi.io is NOT available' check.out
+        grep 'Inspecting EESSI repository software.eessi.io...' check.out
+        grep 'ERROR Revision (client):  UNKNOWN' check.out
+        grep 'Client cache quota limit:  UNKNOWN' check.out
+        grep 'ERROR Number of cache cleanups in last 24h:  UNKNOWN' check.out
+        grep 'List of Stratum-1 mirror servers:  UNKNOWN' check.out
+
     - name: Mount EESSI CernVM-FS repository
       uses: cvmfs-contrib/github-action-cvmfs@bc6dae3b3c00a732994bacfac8f0902a3e422c53 # v5.4
       with:
@@ -60,3 +72,20 @@ jobs:
         grep '^Found EESSI repo @ /cvmfs/software.eessi.io/versions/2023.06' shell.out
         grep '^Environment set up to use EESSI (2023.06), have fun' shell.out
         grep '^EESSI_VERSION=2023.06' shell.out
+
+    - name: Test 'eessi check'
+      run: |
+        source ~/env
+        eessi check | tee check.out
+        grep 'Checking for EESSI repositories...' check.out
+        grep 'OK /cvmfs/software.eessi.io is available' check.out
+        grep 'Inspecting EESSI repository software.eessi.io...' check.out
+        grep 'Revision (client): [0-9]\+' check.out
+        grep 'Path to client cache directory: /var/lib/cvmfs/shared' check.out
+        grep 'Client cache quota limit: [0-9.]\+ GiB' check.out
+        grep 'Cache Usage:  [0-9]\+k / [0-9]\+k' check.out
+        grep 'http://aws-eu-central-s1.eessi.science/cvmfs/software.eessi.io' check.out
+        grep 'http://cvmfs-ext.gridpp.rl.ac.uk:8000/cvmfs/software.eessi.io' check.out
+        grep 'WARNING Proxy servers: DIRECT (not recommended' check.out
+        grep 'GeoAPI enabled: yes' check.out
+        grep 'Client profile: single' check.out
