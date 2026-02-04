@@ -161,13 +161,11 @@ def check_repo(repo: str):
     """
     repo_path = os.path.join(CVMFS_ROOT, repo)
 
-    results = [
-        is_repo_available(repo),
-    ]
+    print_result(*is_repo_available(repo), indent_level=1)
 
     revision = get_repo_attribute(repo, 'revision')
     status = ERROR if revision == UNKNOWN else INFO
-    results.append((status, f"Revision (client): {revision}"))
+    print_result(status, f"Revision (client): {revision}", indent_level=1)
 
     grouped_keys = {
         "Client cache": {
@@ -197,7 +195,7 @@ def check_repo(repo: str):
         setting_values = get_cvmfs_config_settings(repo, specs['keys'])
 
         for key in specs['keys']:
-            descr = CVMFS_CLIENT_SETTINGS[key]
+            setting = CVMFS_CLIENT_SETTINGS[key]
             value = setting_values.get(key)
             value = reformat_for_humans(key, value)
 
@@ -207,13 +205,13 @@ def check_repo(repo: str):
                 value += " (not recommended, see https://eessi.io/docs/no-proxy)"
 
             if value is None:
-                results.append((ERROR, f"{descr}: {UNKNOWN}"))
+                print_result(ERROR, f"{setting}: {UNKNOWN}", indent_level=2)
             else:
                 if isinstance(value, list):
                     # indent list items by two levels
                     value = '\n' + '\n'.join(' ' * 4 * 3 + x for x in value)
 
-                print_result(status, f"{descr}: {value}", indent_level=2)
+                print_result(status, f"{setting}: {value}", indent_level=2)
 
         for field in specs.get('stat_fields', []):
             regex = re.compile(f"^{field}:(?P<value>.*)", re.M)
@@ -235,10 +233,7 @@ def check_repo(repo: str):
             msg += " (cache quota limit too low?)"
         else:
             status = OK
-    results.append((status, msg))
-
-
-    return results
+    print_result(status, msg, indent_level=1)
 
 
 # TODO:
