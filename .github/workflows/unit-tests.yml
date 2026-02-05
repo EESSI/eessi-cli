@@ -1,0 +1,30 @@
+# documentation: https://help.github.com/en/articles/workflow-syntax-for-github-actions
+name: Unit tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read # to fetch code (actions/checkout)
+jobs:
+  ubuntu-minimal:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+    steps:
+    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+    - name: set up Python
+      uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.0
+      with:
+        python-version: ${{matrix.python}}
+
+    - name: Install eessi command line tool
+      id: install
+      run: |
+        pip install .
+
+    - name: Install pytest
+      run: |
+        pip install pytest
+
+    - name: Run tests
+      run: |
+        pytest

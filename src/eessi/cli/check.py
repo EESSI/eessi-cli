@@ -102,14 +102,19 @@ def get_repo_attribute(repo: str, key: str):
     Get repository attribute
     """
     repo_path = os.path.join(CVMFS_ROOT, repo)
+
+    value = UNKNOWN
+
     (stdout, stderr, exit_code) = run_cmd(f"attr -g {key} {repo_path}")
     if exit_code == 0:
-        # expected output is something like:
-        # Attribute "revision" had a 5 byte value for /cvmfs/software.eessi.io:
-        # 13972
-        value = stdout.splitlines()[-1]
-    else:
-        value = UNKNOWN
+        # Expected output is something like:
+        #   Attribute "revision" had a 5 byte value for /cvmfs/software.eessi.io:
+        #   13972
+        #
+        # If there's no value found ('0 byte value'), then last line is *empty*
+        regex = re.compile("had a [1-9][0-9]* byte value", re.M)
+        if regex.search(stdout):
+            value = stdout.splitlines()[-1].strip()
 
     return value
 
