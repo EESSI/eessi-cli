@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.1] - 2026-02-06
+
+- avoid crash in `eessi check`: update `get_repo_attribute` to take into account that attribute value can be 0 byte value (empty) (#13)
+
 ## [0.1.0] - 2026-02-04
 
 - use custom help option to control its placement and behaviour (PR #7)
