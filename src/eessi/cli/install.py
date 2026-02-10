@@ -57,34 +57,33 @@ def run_cmd(
     Returns stdout, stderr, and exit code.
     """
 
-    def _run_cmd_subprocess(
-            cmd: str,
-            sudo_password: t.Optional[str] = None,
-        ) -> t.Tuple[str, str, int]:
+    def _run_cmd_user(cmd: str) -> t.Tuple[str, str, int]:
         """
-        Execute command in subshell
-        Supports using sudo with password input
+        Execute command in subshell as user
         """
-        if sudo_password is not None:
-            # Use sudo with password from stdin (even with empty password)
-            proc = subprocess.Popen(
-                ["sudo", "-S"] + cmd.split(),
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            stdout, stderr = proc.communicate(input=f"{sudo_password}\n")
-            return stdout, stderr, proc.returncode
-
-        # execute command without password input
         res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         return res.stdout, res.stderr, res.returncode
 
-    if not use_sudo:
-        sudo_password = None
-    elif not sudo_password:
-        sudo_password = ""
+    def _run_cmd_root(cmd: str, sudo_password: str) -> t.Tuple[str, str, int]:
+        """
+        Execute command in subshell as root
+        Support sudo with password input
+        """
+        proc = subprocess.Popen(
+            ["sudo", "-S"] + cmd.split(),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        stdout, stderr = proc.communicate(input=f"{sudo_password}\n")
+        return stdout, stderr, proc.returncode
+
+    cmd_runner = _run_cmd_user
+    if use_sudo:
+        cmd_runner = _run_cmd_root
+        if not sudo_password:
+            sudo_password = ""
 
     if show_cmd:
         with Progress(
@@ -93,11 +92,11 @@ def run_cmd(
             transient=True,
         ) as progress:
             progress.add_task(description=f"Executing: {cmd}", total=None)
-            res = _run_cmd_subprocess(cmd, sudo_password)
+            res = cmd_runner(cmd, sudo_password)
         cmd_status_mark = "white_check_mark" if res[2] == 0 else "collision"
         rich_print(f":{cmd_status_mark}: {cmd}")
     else:
-        res = _run_cmd_subprocess(cmd, sudo_password)
+        res = cmd_runner(cmd)
 
     if check and res[2] != 0:
         report_error(f"Command failed: {cmd}; Output: {res[0]}; Error: {res[1]}")
