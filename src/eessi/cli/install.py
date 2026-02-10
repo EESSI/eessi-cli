@@ -137,7 +137,7 @@ def get_package_manager() -> t.Optional[str]:
     """
     # Check for yum/dnf (RHEL-based systems)
     try:
-        res = run_cmd("which yum || which dnf")
+        res = run_cmd("which yum || which dnf", check=False)
         if res[2] == 0:
             return "yum"
     except Exception:
@@ -145,7 +145,7 @@ def get_package_manager() -> t.Optional[str]:
 
     # Check for apt (Debian-based systems)
     try:
-        res = run_cmd("which apt")
+        res = run_cmd("which apt", check=False)
         if res[2] == 0:
             return "apt"
     except Exception:
