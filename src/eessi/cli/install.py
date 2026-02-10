@@ -29,6 +29,11 @@ DEFAULT_CVMFS_CLIENT_PROFILE = "single"
 DEFAULT_CVMFS_QUOTA_LIMIT = 10000
 DEFAULT_CVMFS_CACHE_DIR = "/var/lib/cvmfs"
 
+URL_CVMFS_RELEASE_RPM = "https://cvmrepo.s3.cern.ch/cvmrepo/yum/cvmfs-release-latest.noarch.rpm"
+URL_CVMFS_RELEASE_DEB = "https://cvmrepo.s3.cern.ch/cvmrepo/apt/cvmfs-release-latest_all.deb"
+URL_CVMFS_EESSI_RPM = "https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi-latest.noarch.rpm"
+URL_CVMFS_EESSI_DEB = "https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb"
+
 def report_error(msg: str) -> t.NoReturn:
     """
     Report error and exit with specified non-zero exit code
@@ -135,21 +140,15 @@ def get_package_manager() -> t.Optional[str]:
     """
     Determine which package manager is available on the system
     """
-    # Check for yum/dnf (RHEL-based systems)
-    try:
-        res = run_cmd("which yum || which dnf", check=False)
-        if res[2] == 0:
-            return "yum"
-    except Exception:
-        pass
+    supported_package_managers = ["yum", "dnf", "apt"]
 
-    # Check for apt (Debian-based systems)
-    try:
-        res = run_cmd("which apt", check=False)
-        if res[2] == 0:
-            return "apt"
-    except Exception:
-        pass
+    for pkgmgr in supported_package_managers:
+        try:
+            _, _, exit_code = run_cmd(f"command -v {pkgmgr}", check=False)
+            if exit_code == 0:
+                return pkgmgr
+        except Exception:
+            pass
 
     # If we can't find any package manager, return None
     return None
@@ -204,26 +203,28 @@ def install_cvmfs(sudo_password: t.Optional[str]) -> None:
 
     package_manager = get_package_manager()
 
-    if package_manager == "yum":
+    if package_manager in ["yum", "dnf"]:
         rich_print(":white_check_mark: Detected RHEL-based distribution")
 
         # Install CernVM-FS
         run_cmd(
-            "yum install -y https://cvmrepo.s3.cern.ch/cvmrepo/yum/cvmfs-release-latest.noarch.rpm",
+            f"{package_manager} install -y {URL_CVMFS_RELEASE_RPM}",
             show_cmd=True,
             use_sudo=True,
             sudo_password=sudo_password,
         )
-        run_cmd("yum install -y cvmfs", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
+        run_cmd(
+            f"{package_manager} install -y cvmfs",
+            show_cmd=True,
+            use_sudo=True,
+            sudo_password=sudo_password,
+        )
 
     elif package_manager == "apt":
         rich_print(":white_check_mark: Detected Debian-based distribution")
 
         # Install CernVM-FS
-        cvmfs_latest_deb = download_remote_file(
-            "https://cvmrepo.s3.cern.ch/cvmrepo/apt/cvmfs-release-latest_all.deb",
-            filename="cvmfs-release-latest_all.deb",
-        )
+        cvmfs_latest_deb = download_remote_file(URL_CVMFS_RELEASE_DEB, filename="cvmfs-release-latest_all.deb")
         run_cmd(f"dpkg -i {cvmfs_latest_deb}", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
         run_cmd("apt update", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
         run_cmd("apt install -y cvmfs", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
@@ -258,20 +259,17 @@ def install_eessi_config(sudo_password: t.Optional[str] = None) -> None:
 
     package_manager = get_package_manager()
 
-    if package_manager == "yum":
+    if package_manager in ["yum", "dnf"]:
         rich_print(":white_check_mark: Detected RHEL-based distribution")
         run_cmd(
-            "yum install -y https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi-latest.noarch.rpm",
+            f"{package_manager} install -y {URL_CVMFS_EESSI_RPM}",
             use_sudo=True,
             show_cmd=True,
             sudo_password=sudo_password,
         )
     elif package_manager == "apt":
         rich_print(":white_check_mark: Detected Debian-based distribution")
-        cvmfs_eessi_config_deb = download_remote_file(
-            "https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb",
-            filename="cvmfs-config-eessi_latest_all.deb",
-        )
+        cvmfs_eessi_config_deb = download_remote_file(URL_CVMFS_EESSI_DEB, filename="cvmfs-config-eessi_latest_all.deb")
         run_cmd(f"dpkg -i {cvmfs_eessi_config_deb}", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
         os.remove(cvmfs_eessi_config_deb)
     else:
