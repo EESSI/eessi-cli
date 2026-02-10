@@ -416,12 +416,12 @@ def install(
     """
     Install EESSI natively on the local host
 
-    This command will:
-    1. Install CernVM-FS if not already installed
-    2. Install EESSI configuration for CernVM-FS if not already installed
-    3. Install client configuration file for CernVM-FS if not already installed
+    This command will carry out the following tasks:
+    1. Install CernVM-FS system-wide
+    2. Install EESSI configuration for CernVM-FS
+    3. Configure CernVM-FS client
 
-    Note: This command requires root privileges.
+    [i]Note: This command requires [red]root privileges[/].
     """
     native_install(cache_dir=cache_dir, config_file=config_file, quota_limit=quota_limit)
     rich_print("You can now use EESSI by running 'eessi init' or 'eessi shell'")
