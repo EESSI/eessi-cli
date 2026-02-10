@@ -108,7 +108,7 @@ def run_cmd(
     return res
 
 
-def download_remote_file(url: str, filename: t.Optional[str] = None):
+def download_remote_file(url: str, filename: t.Optional[str] = None) -> str:
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -127,6 +127,21 @@ def download_remote_file(url: str, filename: t.Optional[str] = None):
             rich_print(f":white_check_mark: Downloaded {url}")
     return local_path
 
+def download_and_install_remote_deb(url: str, sudo_password: str) -> None:
+    """
+    Download DEB file from given URL and install it with dpkg
+    Use temporary directory
+    """
+    filename = os.path.basename(url)
+    if os.path.splitext(filename)[1] != ".deb":
+        report_error(f"Cannot install file '{filename}' in Debian-based system")
+
+    original_workdir = os.getcwd()
+    with tempfile.TemporaryDirectory() as tmp_workdir:
+        os.chdir(tmp_workdir)
+        local_pkg = download_remote_file(url, filename=filename)
+        run_cmd(f"dpkg -i {local_pkg}", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
+    os.chdir(original_workdir)
 
 def ask_sudo_password() -> t.Optional[str]:
     """
@@ -150,7 +165,6 @@ def get_package_manager() -> t.Optional[str]:
         except Exception:
             pass
 
-    # If we can't find any package manager, return None
     return None
 
 
@@ -162,7 +176,6 @@ def is_cvmfs_installed() -> bool:
 
 def is_eessi_config_installed() -> bool:
     """Check if EESSI configuration is installed"""
-    # Check for cvmfs-config-eessi package or configuration files
     return os.path.exists("/etc/cvmfs/domain.d/eessi.io.conf")
 
 
@@ -205,8 +218,6 @@ def install_cvmfs(sudo_password: t.Optional[str]) -> None:
 
     if package_manager in ["yum", "dnf"]:
         rich_print(":white_check_mark: Detected RHEL-based distribution")
-
-        # Install CernVM-FS
         run_cmd(
             f"{package_manager} install -y {URL_CVMFS_RELEASE_RPM}",
             show_cmd=True,
@@ -222,13 +233,9 @@ def install_cvmfs(sudo_password: t.Optional[str]) -> None:
 
     elif package_manager == "apt":
         rich_print(":white_check_mark: Detected Debian-based distribution")
-
-        # Install CernVM-FS
-        cvmfs_latest_deb = download_remote_file(URL_CVMFS_RELEASE_DEB, filename="cvmfs-release-latest_all.deb")
-        run_cmd(f"dpkg -i {cvmfs_latest_deb}", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
+        download_and_install_remote_deb(URL_CVMFS_RELEASE_DEB, sudo_password=sudo_password)
         run_cmd("apt update", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
         run_cmd("apt install -y cvmfs", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
-        os.remove(cvmfs_latest_deb)
     else:
         report_error(
             "No supported package manager found. Only yum/dnf (RHEL-based) and apt (Debian-based) "
@@ -269,9 +276,7 @@ def install_eessi_config(sudo_password: t.Optional[str] = None) -> None:
         )
     elif package_manager == "apt":
         rich_print(":white_check_mark: Detected Debian-based distribution")
-        cvmfs_eessi_config_deb = download_remote_file(URL_CVMFS_EESSI_DEB, filename="cvmfs-config-eessi_latest_all.deb")
-        run_cmd(f"dpkg -i {cvmfs_eessi_config_deb}", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
-        os.remove(cvmfs_eessi_config_deb)
+        download_and_install_remote_deb(URL_CVMFS_EESSI_DEB, sudo_password=sudo_password)
     else:
         report_error(
             "No supported package manager found. Only yum/dnf (RHEL-based) and apt (Debian-based) "
