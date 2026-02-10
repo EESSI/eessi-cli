@@ -197,7 +197,7 @@ def install_cvmfs(sudo_password: t.Optional[str]) -> None:
     if not install_confirmation:
         raise typer.Abort()
 
-    if not sudo_password:
+    if sudo_password is None:
         sudo_password = ask_sudo_password()
 
     rich_print(Padding(":package: Installing CernVM-FS packages...", (1, 0, 0, 0)))
@@ -251,7 +251,7 @@ def install_eessi_config(sudo_password: t.Optional[str] = None) -> None:
     if not install_confirmation:
         raise typer.Abort()
 
-    if not sudo_password:
+    if sudo_password is None:
         sudo_password = ask_sudo_password()
 
     rich_print(Padding(":package: Installing EESSI configuration for CernVM-FS...", (1, 0, 0, 0)))
@@ -304,7 +304,7 @@ def create_client_config(
     if not install_confirmation:
         raise typer.Abort()
 
-    if not sudo_password:
+    if sudo_password is None:
         sudo_password = ask_sudo_password()
 
     rich_print(":package: Creating client configuration file...")
@@ -361,9 +361,6 @@ def native_install(
     2. Installing EESSI configuration for CernVM-FS if not already installed
     3. Creating client configuration file for CernVM-FS if not already installed
     """
-    # Get sudo password if needed
-    sudo_password = None
-
     rich_print(Padding(":rocket: Launching native EESSI installation...", (1, 0, 0, 0)))
 
     task_list = Tree("EESSI requires the following components:")
@@ -373,7 +370,8 @@ def native_install(
     task_list.add("EESSI repositories")
     rich_print(Padding(task_list, (1, 0)))
 
-    # ask for password once
+    # Get sudo password if needed
+    sudo_password = None
     if (not is_cvmfs_installed() or
         not is_eessi_config_installed() or
         not is_client_config_installed()):
