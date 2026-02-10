@@ -85,10 +85,12 @@ def run_cmd(
         return stdout, stderr, proc.returncode
 
     cmd_runner = _run_cmd_user
+    cmd_runner_args = [cmd]
     if use_sudo:
-        cmd_runner = _run_cmd_root
         if not sudo_password:
             sudo_password = ""
+        cmd_runner = _run_cmd_root
+        cmd_runner_args.append(sudo_password)
 
     if show_cmd:
         with Progress(
@@ -97,11 +99,11 @@ def run_cmd(
             transient=True,
         ) as progress:
             progress.add_task(description=f"Executing: {cmd}", total=None)
-            res = cmd_runner(cmd, sudo_password)
+            res = cmd_runner(*cmd_runner_args)
         cmd_status_mark = "white_check_mark" if res[2] == 0 else "collision"
         rich_print(f":{cmd_status_mark}: {cmd}")
     else:
-        res = cmd_runner(cmd)
+        res = cmd_runner(*cmd_runner_args)
 
     if check and res[2] != 0:
         report_error(f"Command failed: {cmd}; Output: {res[0]}; Error: {res[1]}")
