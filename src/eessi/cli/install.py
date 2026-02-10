@@ -157,11 +157,8 @@ def get_package_manager() -> t.Optional[str]:
 
 def is_cvmfs_installed() -> bool:
     """Check if CernVM-FS is installed"""
-    try:
-        _, _, exit_code = run_cmd("cvmfs_config showconfig", check=False)
-        return exit_code == 0
-    except Exception:
-        return False
+    _, _, exit_code = run_cmd("cvmfs_config showconfig", check=False)
+    return exit_code == 0
 
 
 def is_eessi_config_installed() -> bool:
