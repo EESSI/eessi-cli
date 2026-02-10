@@ -11,6 +11,7 @@ import tempfile
 import typing as t
 import urllib.error as urlerr
 import urllib.request as urlreq
+from enum import Enum
 
 import typer
 from rich import print as rich_print
@@ -24,8 +25,12 @@ from eessi.cli.help import help_callback
 app = typer.Typer()
 
 # Default values for CernVM-FS configuration
+class CVMFSClientProfiles(str, Enum):
+    single = "single"
+    cluster = "cluster"
+
 DEFAULT_CVMFS_CLIENT_FILE = "/etc/cvmfs/default.local"
-DEFAULT_CVMFS_CLIENT_PROFILE = "single"
+DEFAULT_CVMFS_CLIENT_PROFILE = CVMFSClientProfiles.single
 DEFAULT_CVMFS_QUOTA_LIMIT = 10000
 DEFAULT_CVMFS_CACHE_DIR = "/var/lib/cvmfs"
 
@@ -295,6 +300,7 @@ def create_client_config(
     cache_dir: str = DEFAULT_CVMFS_CACHE_DIR,
     config_file: str = DEFAULT_CVMFS_CLIENT_FILE,
     quota_limit: int = DEFAULT_CVMFS_QUOTA_LIMIT,
+    client_profile: str = DEFAULT_CVMFS_CLIENT_PROFILE,
     sudo_password: t.Optional[str] = None,
 ) -> None:
     """Create client configuration file for CernVM-FS"""
@@ -315,7 +321,7 @@ def create_client_config(
     rich_print(":package: Creating client configuration file...")
 
     config_content = [
-        f"CVMFS_CLIENT_PROFILE='{DEFAULT_CVMFS_CLIENT_PROFILE}'",
+        f"CVMFS_CLIENT_PROFILE='{client_profile.value}'",
         f"CVMFS_QUOTA_LIMIT={quota_limit}",
     ]
     # Add cache directory if it's not the default
@@ -347,18 +353,10 @@ def setup_eessi(sudo_password: t.Optional[str] = None) -> None:
 
 
 def native_install(
-    cache_dir: str = typer.Option(
-        DEFAULT_CVMFS_CACHE_DIR,
-        help="Directory for CernVM-FS client cache",
-    ),
-    config_file: str = typer.Option(
-        DEFAULT_CVMFS_CLIENT_FILE,
-        help="Path to client configuration file for CernVM-FS",
-    ),
-    quota_limit: int = typer.Option(
-        DEFAULT_CVMFS_QUOTA_LIMIT,
-        help="CernVM-FS client cache quota limit in MB",
-    ),
+    cache_dir: str = DEFAULT_CVMFS_CACHE_DIR,
+    config_file: str = DEFAULT_CVMFS_CLIENT_FILE,
+    quota_limit: int = DEFAULT_CVMFS_QUOTA_LIMIT,
+    client_profile: str = DEFAULT_CVMFS_CLIENT_PROFILE,
 ) -> None:
     """
     Install EESSI natively on the local host by:
@@ -392,7 +390,7 @@ def native_install(
 
     # Check and create client configuration if needed
     rich_print(Padding(":jigsaw: [green]Step 3 of 4: [bold]client configuration for CernVM-FS[/]", (1, 0)))
-    create_client_config(cache_dir, config_file, quota_limit, sudo_password)
+    create_client_config(cache_dir, config_file, quota_limit, client_profile, sudo_password)
 
     # Setup EESSI repositories
     rich_print(Padding(":jigsaw: [green]Step 4 of 4: [bold]EESSI repositories[/]", (1, 0)))
@@ -411,9 +409,22 @@ def install(
         callback=help_callback,
         is_eager=True,
     ),
-    cache_dir: str = DEFAULT_CVMFS_CACHE_DIR,
-    config_file: str = DEFAULT_CVMFS_CLIENT_FILE,
-    quota_limit: int = DEFAULT_CVMFS_QUOTA_LIMIT,
+    cache_dir: str = typer.Option(
+        DEFAULT_CVMFS_CACHE_DIR,
+        help="Directory for CernVM-FS client cache",
+    ),
+    config_file: str = typer.Option(
+        DEFAULT_CVMFS_CLIENT_FILE,
+        help="Path to client configuration file for CernVM-FS",
+    ),
+    quota_limit: int = typer.Option(
+        DEFAULT_CVMFS_QUOTA_LIMIT,
+        help="CernVM-FS client cache quota limit in MB",
+    ),
+    client_profile: CVMFSClientProfiles = typer.Option(
+        DEFAULT_CVMFS_CLIENT_PROFILE,
+        help="CernVM-FS client operation profile",
+    ),
 ):
     """
     Install EESSI natively on the local host
@@ -425,7 +436,12 @@ def install(
 
     [i]Note: This command requires [red]root privileges[/].
     """
-    native_install(cache_dir=cache_dir, config_file=config_file, quota_limit=quota_limit)
+    native_install(
+        cache_dir=cache_dir,
+        config_file=config_file,
+        quota_limit=quota_limit,
+        client_profile=client_profile,
+    )
     rich_print("You can now use EESSI by running 'eessi init' or 'eessi shell'")
 
 
