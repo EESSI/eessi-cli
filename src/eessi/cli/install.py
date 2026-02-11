@@ -5,8 +5,6 @@
 
 import os
 import re
-import subprocess
-import sys
 import tempfile
 import typing as t
 import urllib.error as urlerr
@@ -17,12 +15,15 @@ import typer
 from rich import print as rich_print
 from rich.padding import Padding
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Confirm
 from rich.tree import Tree
 
 from eessi.cli.help import help_callback
+from eessi.print import report_error
+from eessi.run import CmdRunner
 
 app = typer.Typer()
+runner = CmdRunner()
 
 # Default values for CernVM-FS configuration
 class CVMFSClientProfiles(str, Enum):
@@ -38,81 +39,6 @@ URL_CVMFS_RELEASE_RPM = "https://cvmrepo.s3.cern.ch/cvmrepo/yum/cvmfs-release-la
 URL_CVMFS_RELEASE_DEB = "https://cvmrepo.s3.cern.ch/cvmrepo/apt/cvmfs-release-latest_all.deb"
 URL_CVMFS_EESSI_RPM = "https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi-latest.noarch.rpm"
 URL_CVMFS_EESSI_DEB = "https://github.com/EESSI/filesystem-layer/releases/download/latest/cvmfs-config-eessi_latest_all.deb"
-
-def report_error(msg: str) -> t.NoReturn:
-    """
-    Report error and exit with specified non-zero exit code
-    """
-    rich_print(f":collision: [bold red]{msg}[/]", file=sys.stderr)
-    raise typer.Abort()
-
-
-def run_cmd(
-    cmd: str,
-    check: bool = True,
-    show_cmd: bool = False,
-    use_sudo: bool = False,
-    sudo_password: t.Optional[str] = None,
-) -> t.Tuple[str, str, int]:
-    """
-    Run shell command.
-
-    Args:
-        cmd: Command to execute
-        check: Whether to check for errors and report them
-        show_cmd: Whether to show the executing command with a spinner
-        use_sudo: Whether to use sudo for this command
-        sudo_password: Optional sudo password to use when show_cmd is True
-
-    Returns stdout, stderr, and exit code.
-    """
-
-    def _run_cmd_user(cmd: str) -> t.Tuple[str, str, int]:
-        """
-        Execute command in subshell as user
-        """
-        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        return res.stdout, res.stderr, res.returncode
-
-    def _run_cmd_root(cmd: str, sudo_password: str) -> t.Tuple[str, str, int]:
-        """
-        Execute command in subshell as root
-        Support sudo with password input
-        """
-        proc = subprocess.Popen(
-            ["sudo", "-S"] + cmd.split(),
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        stdout, stderr = proc.communicate(input=f"{sudo_password}\n")
-        return stdout, stderr, proc.returncode
-
-    cmd_runner = _run_cmd_user
-    cmd_runner_args = [cmd]
-    if use_sudo:
-        if not sudo_password:
-            sudo_password = ""
-        cmd_runner = _run_cmd_root
-        cmd_runner_args.append(sudo_password)
-
-    if show_cmd:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            transient=True,
-        ) as progress:
-            progress.add_task(description=f"Executing: {cmd}", total=None)
-            res = cmd_runner(*cmd_runner_args)
-        cmd_status_mark = "white_check_mark" if res[2] == 0 else "collision"
-        rich_print(f":{cmd_status_mark}: {cmd}")
-    else:
-        res = cmd_runner(*cmd_runner_args)
-
-    if check and res[2] != 0:
-        report_error(f"Command failed: {cmd}; Output: {res[0]}; Error: {res[1]}")
-    return res
 
 
 def download_remote_file(url: str, filename: t.Optional[str] = None) -> str:
@@ -134,7 +60,8 @@ def download_remote_file(url: str, filename: t.Optional[str] = None) -> str:
             rich_print(f":white_check_mark: Downloaded {url}")
     return local_path
 
-def download_and_install_remote_deb(url: str, sudo_password: str) -> None:
+
+def download_and_install_remote_deb(url: str) -> None:
     """
     Download DEB file from given URL and install it with dpkg
     Use temporary directory
@@ -147,15 +74,11 @@ def download_and_install_remote_deb(url: str, sudo_password: str) -> None:
     with tempfile.TemporaryDirectory() as tmp_workdir:
         os.chdir(tmp_workdir)
         local_pkg = download_remote_file(url, filename=filename)
-        run_cmd(f"dpkg -i {local_pkg}", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
+        runner.run_cmd(
+            f"dpkg -i {local_pkg}",
+            use_sudo=True,
+        )
     os.chdir(original_workdir)
-
-def ask_sudo_password() -> t.Optional[str]:
-    """
-    Prompt the user to input the password for sudo
-    """
-    rich_print(":rotating_light: The requested installation steps require executing commands as [bold red]root[/]")
-    return Prompt.ask(":key: Enter your [bold yellow]user password[/] in this system:", password=True)
 
 
 def get_package_manager() -> t.Optional[str]:
@@ -166,7 +89,11 @@ def get_package_manager() -> t.Optional[str]:
 
     for pkgmgr in supported_package_managers:
         try:
-            _, _, exit_code = run_cmd(f"command -v {pkgmgr}", check=False)
+            _, _, exit_code = runner.run_cmd(
+                f"command -v {pkgmgr}",
+                check=False,
+                show_cmd=False,
+            )
             if exit_code == 0:
                 return pkgmgr
         except Exception:
@@ -177,7 +104,11 @@ def get_package_manager() -> t.Optional[str]:
 
 def is_cvmfs_installed() -> bool:
     """Check if CernVM-FS is installed"""
-    _, _, exit_code = run_cmd("cvmfs_config showconfig", check=False)
+    _, _, exit_code = runner.run_cmd(
+        "cvmfs_config showconfig",
+        check=False,
+        show_cmd=False,
+    )
     return exit_code == 0
 
 
@@ -205,7 +136,7 @@ def is_client_config_installed(config_file: str = DEFAULT_CVMFS_CLIENT_FILE) -> 
     return client_profile and quota_limit
 
 
-def install_cvmfs(sudo_password: t.Optional[str]) -> None:
+def install_cvmfs() -> None:
     """Install CernVM-FS based on the Linux distribution"""
 
     if is_cvmfs_installed():
@@ -216,33 +147,32 @@ def install_cvmfs(sudo_password: t.Optional[str]) -> None:
     if not install_confirmation:
         raise typer.Abort()
 
-    if sudo_password is None:
-        sudo_password = ask_sudo_password()
-
     rich_print(Padding(":package: Installing CernVM-FS packages...", (1, 0, 0, 0)))
 
     package_manager = get_package_manager()
 
     if package_manager in ["yum", "dnf"]:
         rich_print(":white_check_mark: Detected RHEL-based distribution")
-        run_cmd(
+        runner.run_cmd(
             f"{package_manager} install -y {URL_CVMFS_RELEASE_RPM}",
-            show_cmd=True,
             use_sudo=True,
-            sudo_password=sudo_password,
         )
-        run_cmd(
+        runner.run_cmd(
             f"{package_manager} install -y cvmfs",
-            show_cmd=True,
             use_sudo=True,
-            sudo_password=sudo_password,
         )
 
     elif package_manager == "apt":
         rich_print(":white_check_mark: Detected Debian-based distribution")
-        download_and_install_remote_deb(URL_CVMFS_RELEASE_DEB, sudo_password=sudo_password)
-        run_cmd("apt update", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
-        run_cmd("apt install -y cvmfs", show_cmd=True, use_sudo=True, sudo_password=sudo_password)
+        download_and_install_remote_deb(URL_CVMFS_RELEASE_DEB)
+        runner.run_cmd(
+            "apt update",
+            use_sudo=True,
+        )
+        runner.run_cmd(
+            "apt install -y cvmfs",
+            use_sudo=True,
+        )
     else:
         report_error(
             "No supported package manager found. Only yum/dnf (RHEL-based) and apt (Debian-based) "
@@ -255,7 +185,7 @@ def install_cvmfs(sudo_password: t.Optional[str]) -> None:
         report_error("verification of CernVM-FS installation failed")
 
 
-def install_eessi_config(sudo_password: t.Optional[str] = None) -> None:
+def install_eessi_config() -> None:
     """Install EESSI configuration for CernVM-FS"""
 
     if is_eessi_config_installed():
@@ -266,24 +196,19 @@ def install_eessi_config(sudo_password: t.Optional[str] = None) -> None:
     if not install_confirmation:
         raise typer.Abort()
 
-    if sudo_password is None:
-        sudo_password = ask_sudo_password()
-
     rich_print(Padding(":package: Installing EESSI configuration for CernVM-FS...", (1, 0, 0, 0)))
 
     package_manager = get_package_manager()
 
     if package_manager in ["yum", "dnf"]:
         rich_print(":white_check_mark: Detected RHEL-based distribution")
-        run_cmd(
+        runner.run_cmd(
             f"{package_manager} install -y {URL_CVMFS_EESSI_RPM}",
             use_sudo=True,
-            show_cmd=True,
-            sudo_password=sudo_password,
         )
     elif package_manager == "apt":
         rich_print(":white_check_mark: Detected Debian-based distribution")
-        download_and_install_remote_deb(URL_CVMFS_EESSI_DEB, sudo_password=sudo_password)
+        download_and_install_remote_deb(URL_CVMFS_EESSI_DEB)
     else:
         report_error(
             "No supported package manager found. Only yum/dnf (RHEL-based) and apt (Debian-based) "
@@ -301,7 +226,6 @@ def create_client_config(
     config_file: str = DEFAULT_CVMFS_CLIENT_FILE,
     quota_limit: int = DEFAULT_CVMFS_QUOTA_LIMIT,
     client_profile: str = DEFAULT_CVMFS_CLIENT_PROFILE,
-    sudo_password: t.Optional[str] = None,
 ) -> None:
     """Create client configuration file for CernVM-FS"""
 
@@ -314,9 +238,6 @@ def create_client_config(
     )
     if not install_confirmation:
         raise typer.Abort()
-
-    if sudo_password is None:
-        sudo_password = ask_sudo_password()
 
     rich_print(":package: Creating client configuration file...")
 
@@ -332,8 +253,15 @@ def create_client_config(
         fp.writelines(f"{line}\n" for line in config_content)
         fp.close()
         rich_print(":white_check_mark: Configuration parameters added to temporary file")
-        run_cmd(f"cp {fp.name} {config_file}", use_sudo=True, show_cmd=True, sudo_password=sudo_password)
-        run_cmd(f"chmod 644 {config_file}", use_sudo=True, show_cmd=False, sudo_password=sudo_password)
+        runner.run_cmd(
+            f"cp {fp.name} {config_file}",
+            use_sudo=True,
+        )
+        runner.run_cmd(
+            f"chmod 644 {config_file}",
+            show_cmd=False,
+            use_sudo=True,
+        )
 
     if is_client_config_installed(config_file=config_file):
         rich_print(f":tada: Client configuration file created at {config_file}")
@@ -341,14 +269,15 @@ def create_client_config(
         report_error("verification of client configuration for CernVM-FS failed")
 
 
-def setup_eessi(sudo_password: t.Optional[str] = None) -> None:
+def setup_eessi() -> None:
     """Run cvmfs_config setup to make EESSI CernVM-FS repository accessible"""
-    rich_print(
-        ":package: Running cvmfs_config setup to configure EESSI repositories..."
+
+    rich_print(":package: Running cvmfs_config setup to configure EESSI repositories...")
+    runner.run_cmd(
+        "cvmfs_config setup",
+        use_sudo=True,
     )
-    run_cmd(
-        "cvmfs_config setup", show_cmd=True, use_sudo=True, sudo_password=sudo_password
-    )
+
     rich_print(":white_check_mark: EESSI repositories configured successfully")
 
 
@@ -364,37 +293,30 @@ def native_install(
     2. Installing EESSI configuration for CernVM-FS if not already installed
     3. Creating client configuration file for CernVM-FS if not already installed
     """
-    rich_print(Padding(":rocket: Launching native EESSI installation...", (1, 0, 0, 0)))
+    rich_print(Padding(":rocket: Launching native EESSI installation...", (1, 0)))
 
     task_list = Tree("EESSI requires the following components:")
     task_list.add("[underline blue][link=https://cernvm.cern.ch/fs]CernVM File System[/link][/]")
     task_list.add("configuration files of EESSI for CernVM-FS")
     task_list.add("client configuration files for CernVM-FS")
     task_list.add("EESSI repositories")
-    rich_print(Padding(task_list, (1, 0)))
-
-    # Get sudo password if needed
-    sudo_password = None
-    if (not is_cvmfs_installed() or
-        not is_eessi_config_installed() or
-        not is_client_config_installed()):
-        sudo_password = ask_sudo_password()
+    rich_print(task_list)
 
     # Check and install CernVM-FS if needed
     rich_print(Padding(":jigsaw: [green]Step 1 of 4: [bold]CernVM-FS[/]", (1, 0)))
-    install_cvmfs(sudo_password)
+    install_cvmfs()
 
     # Check and install EESSI configuration if needed
     rich_print(Padding(":jigsaw: [green]Step 2 of 4: [bold]EESSI configuration for CernVM-FS[/]", (1, 0)))
-    install_eessi_config(sudo_password)
+    install_eessi_config()
 
     # Check and create client configuration if needed
     rich_print(Padding(":jigsaw: [green]Step 3 of 4: [bold]client configuration for CernVM-FS[/]", (1, 0)))
-    create_client_config(cache_dir, config_file, quota_limit, client_profile, sudo_password)
+    create_client_config(cache_dir, config_file, quota_limit, client_profile)
 
     # Setup EESSI repositories
     rich_print(Padding(":jigsaw: [green]Step 4 of 4: [bold]EESSI repositories[/]", (1, 0)))
-    setup_eessi(sudo_password)
+    setup_eessi()
 
     rich_print(Padding(":checkered_flag: Native EESSI installation completed successfully!", (1, 0)))
 
