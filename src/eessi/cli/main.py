@@ -9,6 +9,7 @@ import typer
 from eessi.cli.check import app as check_app
 from eessi.cli.help import help_callback, version_callback
 from eessi.cli.init import app as init_app
+from eessi.cli.install import app as install_app
 from eessi.cli.shell import app as shell_app
 
 app = typer.Typer(
@@ -21,6 +22,7 @@ app = typer.Typer(
 
 app.add_typer(check_app)
 app.add_typer(init_app)
+app.add_typer(install_app)
 app.add_typer(shell_app)
 
 
