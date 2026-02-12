@@ -366,6 +366,9 @@ def install(
     )
     rich_print("You can now use EESSI by running 'eessi init' or 'eessi shell'")
 
+    # stop timer in CmdRunner
+    runner.sudo_reset_timer.cancel()
+
 
 if __name__ == "__main__":
     app()

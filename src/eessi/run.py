@@ -4,6 +4,7 @@
 # - Alex Domingo (Vrije Universiteit Brussel)
 
 import subprocess
+import threading
 
 from rich import print as rich_print
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -11,28 +12,41 @@ from rich.prompt import Prompt
 
 from eessi.print import report_error
 
+SUDO_PWD_TIMEOUT_SEC = 30.0
+
 
 class CmdRunner:
     """
-    Execute shell commands
-    - as active user
-    - as root with sudo
+    Execute shell commands:
+    - as active user or as root (with sudo)
+    - hidden from output or shown with a spinner
+
+    Password for sudo is stored in a single class attribute and it is
+    automatically cleared after a timeout
     """
     def __init__(self):
+        self.sudo_password = None
+        self.sudo_reset_timer = None
+
+    def clear_sudo_password(self) -> None:
         self.sudo_password = None
 
     def ask_sudo_password(self, cmd: str) -> None:
         """
         Prompt the user to input the password for sudo
+        and trigger the reset of the password after a timeout
         """
         rich_print(
             ":rotating_light: The following command requires [bold red]root permissions[/]: "
             f"[dim cyan]{cmd}[/]"
         )
-        return Prompt.ask(
+        self.sudo_password = Prompt.ask(
             ":key: Enter your [bold yellow]user password[/] in this system:",
             password=True,
         )
+        # trigger reset of sudo password
+        self.sudo_reset_timer = threading.Timer(SUDO_PWD_TIMEOUT_SEC, self.clear_sudo_password)
+        self.sudo_reset_timer.start()
 
     def run_cmd_user(self, cmd: str) -> tuple[str, str, int]:
         """
@@ -51,7 +65,7 @@ class CmdRunner:
         Returns stdout, stderr, and exit code
         """
         if self.sudo_password is None:
-            self.sudo_password = self.ask_sudo_password(cmd)
+            self.ask_sudo_password(cmd)
 
         proc = subprocess.Popen(
             ["sudo", "-S"] + cmd.split(),
@@ -80,7 +94,7 @@ class CmdRunner:
             description = f"Executing command as [bold red]root[/]: [dim cyan]{cmd}[/]"
             # password prompt must happen before spinner, otherwise it gets drawn over
             if self.sudo_password is None:
-                self.sudo_password = self.ask_sudo_password(cmd)
+                self.ask_sudo_password(cmd)
 
         with Progress(
             SpinnerColumn(),
@@ -107,8 +121,6 @@ class CmdRunner:
         cmd_runner = self.run_cmd_user
         if use_sudo:
             cmd_runner = self.run_cmd_root
-            if self.sudo_password is None:
-                self.sudo_password = self.ask_sudo_password(cmd)
 
         return cmd_runner(cmd)
 
