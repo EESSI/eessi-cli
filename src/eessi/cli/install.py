@@ -136,18 +136,22 @@ def is_client_config_installed(config_file: str = DEFAULT_CVMFS_CLIENT_FILE) -> 
     return client_profile and quota_limit
 
 
-def install_cvmfs() -> None:
+def install_cvmfs(answer_yes: bool = None) -> None:
     """Install CernVM-FS based on the Linux distribution"""
 
     if is_cvmfs_installed():
         rich_print(":white_check_mark: CernVM-FS is already installed")
         return
 
-    install_confirmation = Confirm.ask("CernVM-FS not found. Do you want to install CernVM-FS in this system?")
+    install_confirmation = answer_yes
+    if install_confirmation is None:
+        install_confirmation = Confirm.ask(
+            "CernVM-FS not found. Do you want to install CernVM-FS in this system?"
+        )
     if not install_confirmation:
         raise typer.Abort()
 
-    rich_print(Padding(":package: Installing CernVM-FS packages...", (1, 0, 0, 0)))
+    rich_print(":package: Installing CernVM-FS packages...")
 
     package_manager = get_package_manager()
 
@@ -185,18 +189,22 @@ def install_cvmfs() -> None:
         report_error("verification of CernVM-FS installation failed")
 
 
-def install_eessi_config() -> None:
+def install_eessi_config(answer_yes: bool = None) -> None:
     """Install EESSI configuration for CernVM-FS"""
 
     if is_eessi_config_installed():
         rich_print(":white_check_mark: EESSI configuration is already installed")
         return
 
-    install_confirmation = Confirm.ask("EESSI configuration not found. Do you want to install it in this system?")
+    install_confirmation = answer_yes
+    if install_confirmation is None:
+        install_confirmation = Confirm.ask(
+            "EESSI configuration not found. Do you want to install it in this system?"
+        )
     if not install_confirmation:
         raise typer.Abort()
 
-    rich_print(Padding(":package: Installing EESSI configuration for CernVM-FS...", (1, 0, 0, 0)))
+    rich_print(":package: Installing EESSI configuration for CernVM-FS...")
 
     package_manager = get_package_manager()
 
@@ -222,6 +230,7 @@ def install_eessi_config() -> None:
 
 
 def create_client_config(
+    answer_yes: bool = None,
     cache_dir: str = DEFAULT_CVMFS_CACHE_DIR,
     config_file: str = DEFAULT_CVMFS_CLIENT_FILE,
     quota_limit: int = DEFAULT_CVMFS_QUOTA_LIMIT,
@@ -233,9 +242,11 @@ def create_client_config(
         rich_print(":white_check_mark: CernVM-FS client configuration is already installed")
         return
 
-    install_confirmation = Confirm.ask(
-        "CernVM-FS client configuration not found. Do you want to install it in this system?"
-    )
+    install_confirmation = answer_yes
+    if install_confirmation is None:
+        install_confirmation = Confirm.ask(
+            "CernVM-FS client configuration not found. Do you want to install it in this system?"
+        )
     if not install_confirmation:
         raise typer.Abort()
 
@@ -282,6 +293,7 @@ def setup_eessi() -> None:
 
 
 def native_install(
+    answer_yes: bool = None,
     cache_dir: str = DEFAULT_CVMFS_CACHE_DIR,
     config_file: str = DEFAULT_CVMFS_CLIENT_FILE,
     quota_limit: int = DEFAULT_CVMFS_QUOTA_LIMIT,
@@ -304,15 +316,15 @@ def native_install(
 
     # Check and install CernVM-FS if needed
     rich_print(Padding(":jigsaw: [green]Step 1 of 4: [bold]CernVM-FS[/]", (1, 0)))
-    install_cvmfs()
+    install_cvmfs(answer_yes)
 
     # Check and install EESSI configuration if needed
     rich_print(Padding(":jigsaw: [green]Step 2 of 4: [bold]EESSI configuration for CernVM-FS[/]", (1, 0)))
-    install_eessi_config()
+    install_eessi_config(answer_yes)
 
     # Check and create client configuration if needed
     rich_print(Padding(":jigsaw: [green]Step 3 of 4: [bold]client configuration for CernVM-FS[/]", (1, 0)))
-    create_client_config(cache_dir, config_file, quota_limit, client_profile)
+    create_client_config(answer_yes, cache_dir, config_file, quota_limit, client_profile)
 
     # Setup EESSI repositories
     rich_print(Padding(":jigsaw: [green]Step 4 of 4: [bold]EESSI repositories[/]", (1, 0)))
@@ -330,6 +342,12 @@ def install(
         help="Show this message and exit.",
         callback=help_callback,
         is_eager=True,
+    ),
+    answer_yes: bool = typer.Option(
+        None,
+        "-y",
+        "--yes",
+        help="Automatically answer all questions with yes",
     ),
     cache_dir: str = typer.Option(
         DEFAULT_CVMFS_CACHE_DIR,
@@ -359,6 +377,7 @@ def install(
     [i]Note: This command requires [red]root privileges[/].
     """
     native_install(
+        answer_yes=answer_yes,
         cache_dir=cache_dir,
         config_file=config_file,
         quota_limit=quota_limit,
