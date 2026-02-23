@@ -1,3 +1,16 @@
+# Dist files
 build
 dist
 *.egg-info
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# Python
+__pycache__/
+*.pyc
