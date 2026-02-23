@@ -1,6 +1,7 @@
 # license (SPDX): GPL-2.0-only
 #
 # authors: Kenneth Hoste (Ghent University)
+# authors: Davide Grassano (CECAM-EPFL)
 
 import os
 import re
@@ -9,7 +10,7 @@ import subprocess
 import typer
 from rich import print as rich_print
 
-from eessi.cli.help import help_callback
+from eessi.cli import common_options as copts
 
 app = typer.Typer()
 
@@ -265,14 +266,7 @@ def check_repo(repo: str):
 
 @app.command()
 def check(
-    help: bool = typer.Option(
-        None,  # default value
-        "-h",
-        "--help",
-        help="Show this message and exit.",
-        callback=help_callback,
-        is_eager=True,
-    ),
+    help: copts.HELP = None,
 ):
     """
     Check CernVM-FS setup for accessing EESSI
