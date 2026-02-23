@@ -10,7 +10,7 @@ from typing import Annotated
 import typer
 from rich import print as rich_print
 
-from eessi.cli.help import help_callback
+from eessi.cli import common_options as copts
 
 app = typer.Typer()
 
@@ -27,14 +27,7 @@ def report_error(msg, exit_code: int = 1):
 
 @app.command()
 def shell(
-    help: bool = typer.Option(
-        None,  # default value
-        "-h",
-        "--help",
-        help="Show this message and exit.",
-        callback=help_callback,
-        is_eager=True,
-    ),
+    help: copts.HELP = None,
     eessi_version: Annotated[str, typer.Option(
         help="EESSI version"
     )] = '',

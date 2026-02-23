@@ -3,11 +3,12 @@
 # authors:
 # - Kenneth Hoste (Ghent University)
 # - Alex Domingo (Vrije Universiteit Brussel)
+# - Davide Grassano (CECAM-EPFL)
 
 import typer
 
+from eessi.cli import common_options as copts
 from eessi.cli.check import app as check_app
-from eessi.cli.help import help_callback, version_callback
 from eessi.cli.init import app as init_app
 from eessi.cli.shell import app as shell_app
 
@@ -26,22 +27,8 @@ app.add_typer(shell_app)
 
 @app.callback()
 def main(
-    help: bool = typer.Option(
-        None,  # default value
-        "-h",
-        "--help",
-        help="Show this message and exit.",
-        callback=help_callback,
-        is_eager=True,
-    ),
-    version: bool = typer.Option(
-        None,  # default value
-        "-v",
-        "--version",
-        help="Show version of eessi CLI.",
-        callback=version_callback,
-        is_eager=True,
-    ),
+    help: copts.HELP = None,
+    version: copts.VERSION = None,
 ):
     """
     Top level eessi command

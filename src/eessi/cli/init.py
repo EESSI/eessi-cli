@@ -1,27 +1,21 @@
 # license (SPDX): GPL-2.0-only
 #
 # authors: Kenneth Hoste (Ghent University)
+# authors: Davide Grassano (CECAM-EPFL)
 
 import os
 import sys
 
 import typer
 
-from eessi.cli.help import help_callback
+from eessi.cli import common_options as copts
 
 app = typer.Typer()
 
 
 @app.command()
 def init(
-    help: bool = typer.Option(
-        None,  # default value
-        "-h",
-        "--help",
-        help="Show this message and exit.",
-        callback=help_callback,
-        is_eager=True,
-    ),
+    help: copts.HELP = None,
 ):
     """
     Initialize shell environment for using EESSI
