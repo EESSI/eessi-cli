@@ -90,7 +90,12 @@ def is_repo_available(repo: str):
     """
     repo_path = os.path.join(CVMFS_ROOT, repo)
     if os.path.isdir(repo_path):
-        res = (OK, f"{repo_path} is available")
+        # also make sure the directory is not empty,
+        # see also https://github.com/EESSI/eessi-cli/issues/21
+        if os.listdir(repo_path):
+            res = (OK, f"{repo_path} is available")
+        else:
+            res = (ERROR, f"{repo_path} exists but is empty")
     else:
         res = (ERROR, f"{repo_path} is NOT available")
 
