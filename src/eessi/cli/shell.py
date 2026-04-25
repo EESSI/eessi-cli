@@ -36,8 +36,8 @@ def shell(
         is_eager=True,
     ),
     eessi_version: Annotated[str, typer.Option(
-        "-v",
-        "--eessi_version",
+        "-e",
+        "--eessi-version",
         help="EESSI version"
     )] = '',
 ):
