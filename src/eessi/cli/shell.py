@@ -36,6 +36,8 @@ def shell(
         is_eager=True,
     ),
     eessi_version: Annotated[str, typer.Option(
+        "-e",
+        "--eessi-version",
         help="EESSI version"
     )] = '',
 ):
@@ -47,7 +49,7 @@ def shell(
 
     init_file = tempfile.mkstemp()[1]
     with open(init_file, 'w') as fp:
-        fp.write(f"set -e; source /cvmfs/software.eessi.io/versions/{eessi_version}/init/bash")
+        fp.write(f"source /cvmfs/software.eessi.io/versions/{eessi_version}/init/bash")
 
     res = subprocess.run(['/bin/bash', '--init-file', init_file, '-i'])
     if res.returncode != 0:
